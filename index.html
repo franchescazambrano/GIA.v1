@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GIA - Asistente Inteligente de Geología</title>
+  
+  <!-- SheetJS para lectura/procesamiento de Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --basalt: #1a1e24;
+      --paper: #f4f6f9;
+      --malachite: #2e7d32;
+      --gold-primary: #d4af37;
+      --gold-light: #f3e5ab;
+      --dark-card: #242b35;
+      --text-main: #333333;
+      --text-muted: #666666;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--paper);
+      color: var(--text-main);
+      overflow-x: hidden;
+    }
+
+    /* --- SPLASH SCREEN / PANTALLA DE ENTRADA --- */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--basalt);
+      color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      cursor: pointer;
+      transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    #splash-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-title {
+      font-size: 4rem;
+      font-weight: 800;
+      color: var(--gold-primary);
+      letter-spacing: 4px;
+      margin-bottom: 10px;
+    }
+
+    .splash-subtitle {
+      font-size: 1.1rem;
+      color: #a0aab5;
+      margin-bottom: 30px;
+    }
+
+    .splash-btn {
+      padding: 12px 28px;
+      background: transparent;
+      border: 2px solid var(--gold-primary);
+      color: var(--gold-primary);
+      font-weight: bold;
+      border-radius: 25px;
+      transition: all 0.3s ease;
+    }
+
+    #splash-screen:hover .splash-btn {
+      background: var(--gold-primary);
+      color: var(--basalt);
+    }
+
+    /* --- ENCABEZADO PRINCIPAL (SOLO GIA Y LOGO PROPORCIONAL) --- */
+    header.brand-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 30px;
+      background-color: var(--basalt);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .brand-title-group h1 {
+      font-size: 1.6rem;
+      letter-spacing: 1.5px;
+      color: var(--gold-primary);
+      font-weight: 700;
+    }
+
+    .brand-logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .brand-logo {
+      max-height: 48px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    /* --- CONTENEDOR PRINCIPAL Y PESTAÑAS --- */
+    .main-container {
+      max-width: 1100px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+
+    .tabs-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #ddd;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      font-weight: bold;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .tab-btn.active {
+      color: var(--malachite);
+      border-bottom-color: var(--malachite);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* --- MAPA DEL PERÚ INTERACTIVO --- */
+    .peru-map-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px 20px;
+      background: var(--dark-card);
+      border-radius: 12px;
+      color: #ffffff;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .peru-map-section h2 {
+      margin-bottom: 20px;
+      font-size: 1.2rem;
+      color: var(--gold-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .map-container {
+      position: relative;
+      width: 100%;
+      max-width: 450px;
+      display: inline-block;
+    }
+
+    .map-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      filter: drop-shadow(0px 0px 8px rgba(212, 175, 55, 0.2));
+    }
+
+    /* --- PUNTOS INTERACTIVOS (CAJAMARCA, AYACUCHO, TACNA) --- */
+    .map-point {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      background-color: var(--gold-primary);
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      cursor: pointer;
+      transform: translate(-50%, -50%);
+      transition: transform 0.2s ease, background-color 0.2s ease;
+      z-index: 10;
+    }
+
+    .map-point::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      border-radius: 50%;
+      border: 2px solid var(--gold-primary);
+      animation: pulse 1.8s infinite ease-out;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.8);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2.2);
+        opacity: 0;
+      }
+    }
+
+    .map-point:hover {
+      background-color: #ffffff;
+      transform: translate(-50%, -50%) scale(1.3);
+    }
+
+    .map-point .tooltip {
+      visibility: hidden;
+      width: 120px;
+      background-color: var(--basalt);
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 6px 8px;
+      position: absolute;
+      z-index: 20;
+      bottom: 130%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.75rem;
+      border: 1px solid var(--gold-primary);
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
+
+    .map-point:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* Ubicación exacta de los tres departamentos */
+    #point-cajamarca { top: 26%; left: 31%; }
+    #point-ayacucho  { top: 66%; left: 54%; }
+    #point-tacna     { top: 89%; left: 81%; }
+
+    /* --- DROPZONE / CARGA DE ARCHIVOS --- */
+    .dropzone {
+      border: 2px dashed #aaa;
+      border-radius: 10px;
+      padding: 40px;
+      text-align: center;
+      background: #ffffff;
+      cursor: pointer;
+      transition: border-color 0.3s;
+    }
+
+    .dropzone:hover {
+      border-color: var(--malachite);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA DE ENTRADA / SPLASH -->
+  <div id="splash-screen" onclick="ingresarGia()">
+    <div class="splash-title">GIA</div>
+    <div class="splash-subtitle">Asistente Inteligente de Geología</div>
+    <button class="splash-btn">Hacer clic para ingresar</button>
+  </div>
+
+  <!-- ENCABEZADO MODIFICADO -->
+  <header class="brand-row">
+    <div class="brand-title-group">
+      <h1>GIA</h1>
+    </div>
+    <div class="brand-logo-container">
+      <img class="brand-logo" src="logo-goldfields.png" alt="Logo" />
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="main-container">
+    
+    <nav class="tabs-nav">
+      <button class="tab-btn active" onclick="cambiarTab('mapa-tab')">Ubicación / Mapa</button>
+      <button class="tab-btn" onclick="cambiarTab('carga-tab')">Carga de Datos (Excel)</button>
+    </nav>
+
+    <!-- PESTAÑA 1: MAPA -->
+    <div id="mapa-tab" class="tab-content active">
+      <section class="peru-map-section">
+        <h2>Unidades y Proyectos Exploratorios</h2>
+        
+        <div class="map-container">
+          <img class="map-image" src="https://lh3.googleusercontent.com/d/1vvG70ktnjyg0VtySh6wDn0f7nhLdc5x5" alt="Mapa del Perú" />
+
+          <!-- Puntos solicitados -->
+          <div class="map-point" id="point-cajamarca" onclick="seleccionarRegion('Cajamarca')">
+            <span class="tooltip"><strong>Cajamarca</strong></span>
+          </div>
+
+          <div class="map-point" id="point-ayacucho" onclick="seleccionarRegion('Ayacucho')">
+            <span class="tooltip"><strong>Ayacucho</strong></span>
+          </div>
+
+          <div class="map-point" id="point-tacna" onclick="seleccionarRegion('Tacna')">
+            <span class="tooltip"><strong>Tacna</strong></span>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- PESTAÑA 2: CARGA DE ARCHIVOS -->
+    <div id="carga-tab" class="tab-content">
+      <div class="dropzone" id="dropzone">
+        <p style="font-weight: bold; color: var(--text-main);">Arrastra tus archivos de perforación/muestras (.xlsx, .csv) aquí</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">o haz clic para examinar desde tu equipo</p>
+        <input type="file" id="file-input" accept=".xlsx, .xls, .csv" style="display: none;" />
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Entrar desde el Splash Screen
+    function ingresarGia() {
+      const splash = document.getElementById('splash-screen');
+      splash.classList.add('hidden');
+    }
+
+    // Cambio de Pestañas
+    function cambiarTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+      document.getElementById(tabId).classList.add('active');
+      event.currentTarget.classList.add('active');
+    }
+
+    // Interacción al hacer clic en los puntos del mapa
+    function seleccionarRegion(region) {
+      alert("Zona seleccionada: " + region);
+    }
+
+    // Lógica para abrir explorador de archivos en la dropzone
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+
+    if (dropzone) {
+      dropzone.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          alert('Archivo cargado: ' + e.target.files[0].name);
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
