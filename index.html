@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GIA — Asistente Inteligente de Geología</title>
+<title>GIA - Asistente Inteligente de Geologia</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
@@ -32,25 +32,26 @@
     margin:0 0 6px 0;
   }
   
-  /* ---------- Splash arreglado ---------- */
+  .hidden { display: none !important; }
+
+  /* Splash */
   #splash{
     position:fixed; inset:0; z-index:9999;
     background:radial-gradient(circle at 50% 40%, var(--basalt-2), var(--basalt) 70%);
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
-    transition: opacity 0.4s ease;
   }
   .splash-inner{
     display:flex; flex-direction:column; align-items:center; gap:14px;
     user-select:none;
+    text-align:center;
   }
   .splash-logo{ font-size:5.2rem; font-weight:700; color:var(--paper); }
   .splash-tag{ font-size:1.05rem; color:var(--gold-light); font-style:italic; }
-  .splash-hint{ margin-top:10px; font-size:0.85rem; color:#9AA6B3; background: rgba(255,255,255,0.1); padding: 6px 16px; border-radius:20px; }
+  .splash-hint{ margin-top:10px; font-size:0.85rem; color:#9AA6B3; background: rgba(255,255,255,0.1); padding: 8px 18px; border-radius:20px; }
 
-  /* ---------- Control de Pantallas ---------- */
-  #screen-map, #screen-app{ display:none; min-height:100vh; }
-  #screen-map.active, #screen-app.active{ display:block; }
+  /* Control de Pantallas */
+  #screen-map, #screen-app{ min-height:100vh; }
 
   .map-header{ padding:24px; text-align:center; }
   .map-card-container {
@@ -63,27 +64,27 @@
   }
   .map-wrap { position: relative; width: 100%; max-width: 500px; margin: 0 auto; }
   
-  /* Mapa SVG de Perú */
+  /* Mapa SVG */
   .peru-outline { fill: #102a45; stroke: #20507F; stroke-width: 2; }
-  .dept-path { fill: #1b4168; stroke: #B4965A; stroke-width: 1.5; transition: all 0.3s; cursor:pointer; }
-  .dept-path:hover { fill: #255485; stroke: #FFF; }
+  .dept-group { cursor: pointer; }
+  .dept-path { fill: #1b4168; stroke: #B4965A; stroke-width: 1.5; transition: all 0.3s; }
+  .dept-group:hover .dept-path { fill: #255485; stroke: #FFF; }
   .dept-label { fill: #FFF; font-size: 13px; font-weight: 700; text-anchor: middle; pointer-events: none; }
   
-  .dept-marker { cursor: pointer; }
   .main-circle { fill: #B4965A; stroke: #FFF; stroke-width: 2; }
   .pulse-circle { fill: #B4965A; opacity: 0.5; animation: pulse 2s infinite; transform-origin: center; }
   @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
   .marker-text { fill: #0A2659; font-size: 10px; font-weight: 900; text-anchor: middle; pointer-events: none; }
 
   /* Popover Map */
-  .popover-overlay { display: none; position: absolute; inset:0; background: rgba(10, 38, 89, 0.6); z-index: 100; border-radius:12px; }
+  .popover-overlay { position: absolute; inset:0; background: rgba(10, 38, 89, 0.7); z-index: 100; border-radius:12px; }
   .popover-card {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     background: #102a45; border: 1px solid #B4965A; border-radius: 8px; padding: 20px; width: 280px; text-align: center;
   }
   .popover-btn { background: #B4965A; color: #0A2659; border: none; padding: 10px; border-radius: 4px; font-weight: 700; cursor: pointer; width:100%; margin-top:8px; }
 
-  /* ---------- App Principal ---------- */
+  /* App Principal */
   header{ padding:20px 24px; border-bottom:1px solid var(--line); display:flex; gap:14px; align-items:baseline; }
   main{ max-width:980px; margin:0 auto; padding:24px 16px; }
   
@@ -91,9 +92,6 @@
   .tab{ padding:11px 18px; cursor:pointer; color:#9AA0A6; border-bottom:2px solid transparent; user-select:none; font-size:0.95rem; }
   .tab.active{ color:var(--paper); border-bottom:2px solid var(--malachite); font-weight:bold; }
   .tab-arcgis.active{ border-bottom-color: var(--arcgis-blue); color: #4da9ff; }
-  
-  .panel{ display:none; }
-  .panel.active{ display:block; }
 
   .card{ background:var(--paper); color:var(--ink); border-radius:8px; padding:22px; margin-bottom:16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
   .card h2{ font-size:1.15rem; color:var(--ink); }
@@ -129,23 +127,23 @@
 <body>
 
 <!-- SPLASH -->
-<div id="splash" onclick="dismissSplash()">
+<div id="splash">
   <div class="splash-inner">
     <div class="splash-logo">GIA</div>
-    <div class="splash-tag">Asistente Inteligente de Geología</div>
-    <div class="splash-hint">👆 Haz clic aquí para entrar</div>
+    <div class="splash-tag">Asistente Inteligente de Geologia</div>
+    <div class="splash-hint">Haga clic en cualquier lugar para ingresar</div>
   </div>
 </div>
 
-<!-- MAPA DE PERÚ CON CAJAMARCA, AYACUCHO Y TACNA -->
-<div id="screen-map">
+<!-- MAPA -->
+<div id="screen-map" class="hidden">
   <div class="map-header">
-    <h1>GIA — Mapa de Proyectos Perú</h1>
+    <h1>GIA - Mapa de Proyectos Peru</h1>
     <div style="font-size:0.85rem; color:#9AA0A6;">Seleccione Cajamarca, Ayacucho o Tacna para ingresar</div>
   </div>
 
   <div class="map-card-container">
-    <div id="popover-overlay" class="popover-overlay">
+    <div id="popover-overlay" class="popover-overlay hidden">
       <div class="popover-card">
         <h3 id="popover-title" style="color:#FFF;">Departamento</h3>
         <div id="popover-list"></div>
@@ -157,108 +155,96 @@
         <path class="peru-outline" d="M 120,50 L 180,30 L 260,70 L 330,150 L 440,280 L 460,350 L 380,480 L 320,580 L 290,650 L 240,620 L 180,510 L 120,380 L 80,260 L 50,150 Z" />
 
         <!-- CAJAMARCA -->
-        <g onclick="selectDept('Cajamarca', [{name:'Proyecto Cajamarca Norte', code:'CAJ-01'}, {name:'Porphyry Cajamarca', code:'CAJ-02'}])">
+        <g class="dept-group" id="dept-cajamarca">
           <path class="dept-path" d="M 110,120 L 160,110 L 170,160 L 120,170 Z" />
           <text x="140" y="145" class="dept-label">CAJAMARCA</text>
-          <g class="dept-marker">
-            <circle cx="140" cy="140" r="16" class="pulse-circle"/>
-            <circle cx="140" cy="140" r="8" class="main-circle"/>
-            <text x="140" y="143" class="marker-text">CAJ</text>
-          </g>
+          <circle cx="140" cy="140" r="16" class="pulse-circle"/>
+          <circle cx="140" cy="140" r="8" class="main-circle"/>
+          <text x="140" y="143" class="marker-text">CAJ</text>
         </g>
 
         <!-- AYACUCHO -->
-        <g onclick="selectDept('Ayacucho', [{name:'Proyecto Ayacucho Sur', code:'AYA-01'}, {name:'Vetas Ayacucho', code:'AYA-02'}])">
+        <g class="dept-group" id="dept-ayacucho">
           <path class="dept-path" d="M 230,360 L 280,350 L 290,420 L 240,430 Z" />
           <text x="260" y="395" class="dept-label">AYACUCHO</text>
-          <g class="dept-marker">
-            <circle cx="260" cy="390" r="16" class="pulse-circle"/>
-            <circle cx="260" cy="390" r="8" class="main-circle"/>
-            <text x="260" y="393" class="marker-text">AYA</text>
-          </g>
+          <circle cx="260" cy="390" r="16" class="pulse-circle"/>
+          <circle cx="260" cy="390" r="8" class="main-circle"/>
+          <text x="260" y="393" class="marker-text">AYA</text>
         </g>
 
         <!-- TACNA -->
-        <g onclick="selectDept('Tacna', [{name:'Proyecto Tacna Frontera', code:'TAC-01'}, {name:'Porphyry Tacna', code:'TAC-02'}])">
+        <g class="dept-group" id="dept-tacna">
           <path class="dept-path" d="M 290,600 L 330,590 L 320,640 L 280,630 Z" />
           <text x="305" y="620" class="dept-label">TACNA</text>
-          <g class="dept-marker">
-            <circle cx="305" cy="615" r="16" class="pulse-circle"/>
-            <circle cx="305" cy="615" r="8" class="main-circle"/>
-            <text x="305" y="618" class="marker-text">TAC</text>
-          </g>
+          <circle cx="305" cy="615" r="16" class="pulse-circle"/>
+          <circle cx="305" cy="615" r="8" class="main-circle"/>
+          <text x="305" y="618" class="marker-text">TAC</text>
         </g>
       </svg>
     </div>
   </div>
 </div>
 
-<!-- APLICACIÓN PRINCIPAL -->
-<div id="screen-app">
+<!-- APLICACION PRINCIPAL -->
+<div id="screen-app" class="hidden">
   <header>
     <h1>GIA</h1>
-    <span style="font-size:0.85rem; color:#9AA0A6;">| Modulo de Integración Geológica</span>
+    <span style="font-size:0.85rem; color:#9AA0A6;">| Modulo de Integracion Geologica</span>
   </header>
   <main>
-    <div id="btn-back-wrap">
-      <button class="btn-back-btn" onclick="backToMap()">← Cambiar de Proyecto / Departamento</button>
+    <div>
+      <button id="btn-back" class="btn-back-btn">Regresar al Mapa</button>
     </div>
 
-    <!-- PESTAÑAS PRINCIPALES -->
+    <!-- PESTAÑAS -->
     <div class="tabs-main">
-      <div class="tab active" onclick="switchTab('importar')">Importar Data (XRF / SUCEP / TSG)</div>
-      <div class="tab tab-arcgis" onclick="switchTab('arcgis')">⚙️ Modificar / Configurar ArcGIS</div>
+      <div id="tab-importar" class="tab active">Importar Data (XRF / SUCEP / TSG)</div>
+      <div id="tab-arcgis" class="tab tab-arcgis">Modificar / Configurar ArcGIS</div>
     </div>
 
-    <!-- PESTAÑA 1: IMPORTAR DATA -->
-    <div id="panel-importar" class="panel active">
+    <!-- PESTAÑA 1 -->
+    <div id="panel-importar">
       <div class="card">
         <h2>Cargar Ensayos y Lecturas de Campo</h2>
         <p style="font-size:0.88rem; color:#5C5648;">Suba los archivos correspondientes para vincularlos con ArcGIS.</p>
         
         <div class="modules-grid">
-          
-          <!-- XRF -->
           <div class="module-card">
             <h3>1. Fluorescencia (XRF)</h3>
             <p style="font-size:0.8rem; color:#666;">Leyes elementales (Cu, Au, Fe, etc.)</p>
-            <div class="dropzone" onclick="document.getElementById('fileXrf').click()">
-              📄 Adjuntar Excel/CSV XRF
-              <input type="file" id="fileXrf" hidden accept=".xlsx,.xls,.csv" onchange="processModule('xrf', event)">
+            <div class="dropzone" id="dz-xrf">
+              Adjuntar Excel/CSV XRF
+              <input type="file" id="fileXrf" hidden accept=".xlsx,.xls,.csv">
             </div>
             <div id="badge-xrf" class="status-badge badge-pending">Sin archivo cargado</div>
           </div>
 
-          <!-- SUCEP -->
           <div class="module-card">
             <h3>2. Susceptibilidad (SUCEP)</h3>
-            <p style="font-size:0.8rem; color:#666;">Lecturas magnéticas de testigo/sonda.</p>
-            <div class="dropzone" onclick="document.getElementById('fileSucep').click()">
-              📄 Adjuntar Excel/CSV SUCEP
-              <input type="file" id="fileSucep" hidden accept=".xlsx,.xls,.csv" onchange="processModule('sucep', event)">
+            <p style="font-size:0.8rem; color:#666;">Lecturas magneticas de testigo/sonda.</p>
+            <div class="dropzone" id="dz-sucep">
+              Adjuntar Excel/CSV SUCEP
+              <input type="file" id="fileSucep" hidden accept=".xlsx,.xls,.csv">
             </div>
             <div id="badge-sucep" class="status-badge badge-pending">Sin archivo cargado</div>
           </div>
 
-          <!-- TSG -->
           <div class="module-card">
-            <h3>3. Espectrometría (TSG)</h3>
-            <p style="font-size:0.8rem; color:#666;">Mineralogía de alteración (TerraSpec).</p>
-            <div class="dropzone" onclick="document.getElementById('fileTsg').click()">
-              📄 Adjuntar Archivo TSG
-              <input type="file" id="fileTsg" hidden accept=".xlsx,.xls,.csv" onchange="processModule('tsg', event)">
+            <h3>3. Espectrometria (TSG)</h3>
+            <p style="font-size:0.8rem; color:#666;">Mineralogia de alteracion (TerraSpec).</p>
+            <div class="dropzone" id="dz-tsg">
+              Adjuntar Archivo TSG
+              <input type="file" id="fileTsg" hidden accept=".xlsx,.xls,.csv">
             </div>
             <div id="badge-tsg" class="status-badge badge-pending">Sin archivo cargado</div>
           </div>
-
         </div>
 
-        <button class="primary" style="margin-top:20px; width:100%; font-size:1rem;" onclick="syncWithArcGIS()">
-          🚀 Procesar y Sincronizar Automáticamente con ArcGIS
+        <button id="btn-sync" class="primary" style="margin-top:20px; width:100%; font-size:1rem;">
+          Procesar y Sincronizar Automaticamente con ArcGIS
         </button>
       </div>
 
-      <!-- Resumen / Tabla -->
       <div class="card">
         <h2>Vista Previa de Consolidado</h2>
         <div class="data-table-wrap">
@@ -267,18 +253,18 @@
               <tr><th>Tipo Ensayo</th><th>Muestra / Hole ID</th><th>Atributo 1</th><th>Atributo 2</th><th>Estado ArcGIS</th></tr>
             </thead>
             <tbody>
-              <tr><td colspan="5" style="text-align:center; color:#888;">Cargue un archivo (XRF, SUCEP o TSG) para previsualizar.</td></tr>
+              <tr><td colspan="5" style="text-align:center; color:#888;">Cargue un archivo para previsualizar.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- PESTAÑA 2: MODIFICAR / CONFIGURAR ARCGIS -->
-    <div id="panel-arcgis" class="panel">
+    <!-- PESTAÑA 2 -->
+    <div id="panel-arcgis" class="hidden">
       <div class="card">
-        <h2>Conexión y Enlaces a Servicios de ArcGIS</h2>
-        <p style="font-size:0.88rem; color:#5C5648;">Pegue los links e IDs de sus Feature Server o Web Maps de ArcGIS para la unión automática.</p>
+        <h2>Conexion y Enlaces a Servicios de ArcGIS</h2>
+        <p style="font-size:0.88rem; color:#5C5648;">Pegue los links e IDs de sus Feature Server o Web Maps de ArcGIS.</p>
         
         <div class="arcgis-form-grid">
           <div class="form-group">
@@ -288,25 +274,25 @@
 
           <div class="form-group">
             <label>Item ID del WebMap de ArcGIS:</label>
-            <input type="text" id="arcgis-map-id" placeholder="e.g. 8a3f1249b102431fa2e91209e99a8188">
+            <input type="text" id="arcgis-map-id" placeholder="8a3f1249b102431fa2e91209e99a8188">
           </div>
 
           <div class="form-group">
-            <label>Token de Autenticación / API Key:</label>
+            <label>Token de Autenticacion / API Key:</label>
             <input type="password" id="arcgis-token" placeholder="AAPKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
           </div>
 
           <div class="form-group">
-            <label>Campo Key de Enlace Común:</label>
+            <label>Campo Key de Enlace Comun:</label>
             <select id="arcgis-key-field">
               <option value="HOLE_ID">HOLE_ID (ID de Taladro)</option>
               <option value="SAMPLE_ID">SAMPLE_ID (ID Muestra)</option>
-              <option value="CODE">CÓDIGO DE REGISTRO</option>
+              <option value="CODE">CODIGO DE REGISTRO</option>
             </select>
           </div>
         </div>
 
-        <button class="arcgis-btn" onclick="saveArcGISConfig()">Guardar Configuración de Enlace</button>
+        <button id="btn-save-arcgis" class="arcgis-btn">Guardar Configuracion de Enlace</button>
         <div id="config-status" style="margin-top:10px; font-size:0.85rem; font-weight:bold;"></div>
       </div>
     </div>
@@ -318,68 +304,118 @@
   let arcgisConfig = { url: '', mapId: '', token: '', keyField: 'HOLE_ID' };
   let loadedData = { xrf: [], sucep: [], tsg: [] };
 
-  // Corrección inmediata del Splash
-  function dismissSplash() {
-    let splash = document.getElementById('splash');
-    splash.style.opacity = '0';
-    setTimeout(() => {
-      splash.style.display = 'none';
-      document.getElementById('screen-map').classList.add('active');
-    }, 300);
-  }
+  document.addEventListener('DOMContentLoaded', () => {
+    
+    // Transicion Splash -> Mapa
+    const splash = document.getElementById('splash');
+    const screenMap = document.getElementById('screen-map');
+    const screenApp = document.getElementById('screen-app');
 
-  function selectDept(name, list) {
+    splash.addEventListener('click', () => {
+      splash.classList.add('hidden');
+      screenMap.classList.remove('hidden');
+    });
+
+    // Seleccion Departamento
+    document.getElementById('dept-cajamarca').addEventListener('click', () => {
+      showDeptProjects('Cajamarca', [{name:'Proyecto Cajamarca Norte', code:'CAJ-01'}]);
+    });
+    document.getElementById('dept-ayacucho').addEventListener('click', () => {
+      showDeptProjects('Ayacucho', [{name:'Proyecto Ayacucho Sur', code:'AYA-01'}]);
+    });
+    document.getElementById('dept-tacna').addEventListener('click', () => {
+      showDeptProjects('Tacna', [{name:'Proyecto Tacna Frontera', code:'TAC-01'}]);
+    });
+
+    // Regresar al mapa
+    document.getElementById('btn-back').addEventListener('click', () => {
+      screenApp.classList.add('hidden');
+      screenMap.classList.remove('hidden');
+    });
+
+    // Tabs
+    const tabImportar = document.getElementById('tab-importar');
+    const tabArcgis = document.getElementById('tab-arcgis');
+    const panelImportar = document.getElementById('panel-importar');
+    const panelArcgis = document.getElementById('panel-arcgis');
+
+    tabImportar.addEventListener('click', () => {
+      tabImportar.classList.add('active');
+      tabArcgis.classList.remove('active');
+      panelImportar.classList.remove('hidden');
+      panelArcgis.classList.add('hidden');
+    });
+
+    tabArcgis.addEventListener('click', () => {
+      tabArcgis.classList.add('active');
+      tabImportar.classList.remove('active');
+      panelArcgis.classList.remove('hidden');
+      panelImportar.classList.add('hidden');
+    });
+
+    // Archivos Dropzones
+    document.getElementById('dz-xrf').addEventListener('click', () => document.getElementById('fileXrf').click());
+    document.getElementById('dz-sucep').addEventListener('click', () => document.getElementById('fileSucep').click());
+    document.getElementById('dz-tsg').addEventListener('click', () => document.getElementById('fileTsg').click());
+
+    document.getElementById('fileXrf').addEventListener('change', (e) => processModule('xrf', e));
+    document.getElementById('fileSucep').addEventListener('change', (e) => processModule('sucep', e));
+    document.getElementById('fileTsg').addEventListener('change', (e) => processModule('tsg', e));
+
+    // Guardar ArcGIS
+    document.getElementById('btn-save-arcgis').addEventListener('click', () => {
+      arcgisConfig.url = document.getElementById('arcgis-url').value;
+      arcgisConfig.mapId = document.getElementById('arcgis-map-id').value;
+      arcgisConfig.token = document.getElementById('arcgis-token').value;
+      arcgisConfig.keyField = document.getElementById('arcgis-key-field').value;
+
+      const status = document.getElementById('config-status');
+      status.style.color = '#155724';
+      status.textContent = 'Configuracion guardada correctamente. Clave activa: ' + arcgisConfig.keyField;
+    });
+
+    // Sync
+    document.getElementById('btn-sync').addEventListener('click', () => {
+      if(!arcgisConfig.url) {
+        alert('Por favor configure primero la URL de ArcGIS en Modificar / Configurar ArcGIS.');
+        tabArcgis.click();
+        return;
+      }
+      let totalRows = loadedData.xrf.length + loadedData.sucep.length + loadedData.tsg.length;
+      if(totalRows === 0) {
+        alert('Cargue al menos un archivo antes de sincronizar.');
+        return;
+      }
+      alert(Sincronizando ${totalRows} registros con ArcGIS:\nURL: ${arcgisConfig.url}\nClave: ${arcgisConfig.keyField});
+    });
+  });
+
+  function showDeptProjects(name, list) {
     document.getElementById('popover-title').textContent = name;
-    let container = document.getElementById('popover-list');
+    const container = document.getElementById('popover-list');
     container.innerHTML = '';
     list.forEach(p => {
       let b = document.createElement('button');
       b.className = 'popover-btn';
       b.textContent = p.name;
-      b.onclick = () => openApp();
+      b.onclick = () => {
+        document.getElementById('popover-overlay').classList.add('hidden');
+        document.getElementById('screen-map').classList.add('hidden');
+        document.getElementById('screen-app').classList.remove('hidden');
+      };
       container.appendChild(b);
     });
-    document.getElementById('popover-overlay').style.display = 'block';
-  }
-
-  function openApp() {
-    document.getElementById('popover-overlay').style.display = 'none';
-    document.getElementById('screen-map').classList.remove('active');
-    document.getElementById('screen-app').classList.add('active');
-  }
-
-  function backToMap() {
-    document.getElementById('screen-app').classList.remove('active');
-    document.getElementById('screen-map').classList.add('active');
-  }
-
-  function switchTab(tab) {
-    document.querySelectorAll('.tabs-main .tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    
-    if(tab === 'importar') {
-      document.querySelectorAll('.tabs-main .tab')[0].classList.add('active');
-      document.getElementById('panel-importar').classList.add('active');
-    } else {
-      document.querySelectorAll('.tabs-main .tab')[1].classList.add('active');
-      document.getElementById('panel-arcgis').classList.add('active');
-    }
-  }
-
-  function saveArcGISConfig() {
-    arcgisConfig.url = document.getElementById('arcgis-url').value;
-    arcgisConfig.mapId = document.getElementById('arcgis-map-id').value;
-    arcgisConfig.token = document.getElementById('arcgis-token').value;
-    arcgisConfig.keyField = document.getElementById('arcgis-key-field').value;
-
-    let status = document.getElementById('config-status');
-    status.style.color = '#155724';
-    status.textContent = '✓ Configuración guardada correctamente. Clave activa: ' + arcgisConfig.keyField;
+    document.getElementById('popover-overlay').classList.remove('hidden');
   }
 
   function processModule(moduleType, event) {
     let file = event.target.files[0];
     if(!file) return;
+
+    if (typeof XLSX === 'undefined') {
+      alert('La libreria de lectura Excel aun esta cargando o fue bloqueada. Intente nuevamente.');
+      return;
+    }
 
     let reader = new FileReader();
     reader.onload = function(evt) {
@@ -392,7 +428,7 @@
 
       let badge = document.getElementById(badge-${moduleType});
       badge.className = 'status-badge badge-loaded';
-      badge.textContent = ✓ ${file.name} (${json.length} filas);
+      badge.textContent = ${file.name} (${json.length} filas);
 
       renderTable();
     };
@@ -421,24 +457,8 @@
     });
 
     if(!hasData) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Cargue un archivo (XRF, SUCEP o TSG) para previsualizar.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Cargue un archivo para previsualizar.</td></tr>';
     }
-  }
-
-  function syncWithArcGIS() {
-    if(!arcgisConfig.url) {
-      alert('⚠️ Por favor configure primero la URL / ID de ArcGIS en "⚙️ Modificar / Configurar ArcGIS".');
-      switchTab('arcgis');
-      return;
-    }
-
-    let totalRows = loadedData.xrf.length + loadedData.sucep.length + loadedData.tsg.length;
-    if(totalRows === 0) {
-      alert('⚠️ Cargue al menos un archivo de XRF, SUCEP o TSG antes de sincronizar.');
-      return;
-    }
-
-    alert(✅ Sincronizando ${totalRows} registros con ArcGIS:\nURL: ${arcgisConfig.url}\nClave: ${arcgisConfig.keyField});
   }
 </script>
 </body>
