@@ -1,375 +1,445 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>GIA - Asistente Inteligente de Geología</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GIA — Asistente Inteligente de Geología</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --basalt:#173A63;
+    --basalt-2:#20507F;
+    --paper:#FAF8F2;
+    --paper-2:#EFE9D8;
+    --ink:#241F12;
+    --malachite:#B4965A;
+    --malachite-dark:#96793F;
+    --gold-light:#C8B48C;
+    --line: rgba(180,150,90,0.22);
+    --arcgis-blue: #007ac2;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--basalt);
+    color:var(--paper);
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+    min-height:100vh;
+  }
+  h1,h2,h3{
+    font-family: "Roboto Slab", Georgia, serif;
+    font-weight:700;
+    margin:0 0 6px 0;
+  }
   
-  <!-- SheetJS para lectura/procesamiento de Excel -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  /* ---------- Splash ---------- */
+  #splash{
+    position:fixed; inset:0; z-index:9999;
+    background:radial-gradient(circle at 50% 40%, var(--basalt-2), var(--basalt) 70%);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .splash-inner{
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    transition: opacity 1.1s ease, transform 1.1s ease;
+  }
+  #splash.fade-out .splash-inner{ opacity:0; transform:scale(1.06); }
+  #splash.fade-out{ pointer-events:none; transition:opacity 1.1s ease 0.5s; opacity:0; }
+  .splash-logo{ font-size:5.2rem; font-weight:700; color:var(--paper); }
+  .splash-tag{ font-size:1.05rem; color:var(--gold-light); font-style:italic; }
+  .splash-hint{ margin-top:10px; font-size:0.78rem; color:#9AA6B3; }
 
-  <style>
-    :root {
-      --basalt: #1a1e24;
-      --paper: #f4f6f9;
-      --malachite: #2e7d32;
-      --gold-primary: #d4af37;
-      --gold-light: #f3e5ab;
-      --dark-card: #242b35;
-      --text-main: #333333;
-      --text-muted: #666666;
-    }
+  /* ---------- Control de Pantallas ---------- */
+  #screen-map, #screen-app{ display:none; min-height:100vh; }
+  #screen-map.active, #screen-app.active{ display:block; }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+  .map-header{ padding:24px; text-align:center; }
+  .map-card-container {
+    background: var(--basalt);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--line);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .map-wrap { position: relative; width: 100%; max-width: 600px; margin: 0 auto; }
+  
+  /* Mapa SVG de Perú */
+  .peru-outline { fill: #102a45; stroke: #20507F; stroke-width: 2; }
+  .dept-path { fill: #1b4168; stroke: #B4965A; stroke-width: 1.5; transition: all 0.3s; cursor:pointer; }
+  .dept-path:hover { fill: #255485; stroke: #FFF; }
+  .dept-label { fill: #FFF; font-size: 14px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+  
+  .dept-marker { cursor: pointer; }
+  .main-circle { fill: #B4965A; stroke: #FFF; stroke-width: 2; }
+  .pulse-circle { fill: #B4965A; opacity: 0.5; animation: pulse 2s infinite; transform-origin: center; }
+  @keyframes pulse { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
+  .marker-text { fill: #0A2659; font-size: 10px; font-weight: 900; text-anchor: middle; pointer-events: none; }
 
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--paper);
-      color: var(--text-main);
-      overflow-x: hidden;
-    }
+  /* Popover Map */
+  .popover-overlay { display: none; position: absolute; inset:0; background: rgba(10, 38, 89, 0.5); z-index: 100; border-radius:12px; }
+  .popover-card {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: #102a45; border: 1px solid #B4965A; border-radius: 8px; padding: 20px; width: 280px; text-align: center;
+  }
+  .popover-btn { background: #B4965A; color: #0A2659; border: none; padding: 10px; border-radius: 4px; font-weight: 700; cursor: pointer; width:100%; margin-top:8px; }
 
-    /* --- SPLASH SCREEN / PANTALLA DE ENTRADA --- */
-    #splash-screen {
-      position: fixed;
-      inset: 0;
-      background: var(--basalt);
-      color: #ffffff;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      cursor: pointer;
-      transition: opacity 0.8s ease, visibility 0.8s ease;
-    }
+  /* ---------- App Principal ---------- */
+  header{ padding:20px 24px; border-bottom:1px solid var(--line); display:flex; gap:14px; align-items:baseline; }
+  main{ max-width:980px; margin:0 auto; padding:24px 16px; }
+  
+  .tabs-main{ display:flex; gap:6px; margin-bottom:18px; border-bottom:1px solid var(--line); }
+  .tab{ padding:11px 18px; cursor:pointer; color:#9AA0A6; border-bottom:2px solid transparent; user-select:none; font-size:0.95rem; }
+  .tab.active{ color:var(--paper); border-bottom:2px solid var(--malachite); font-weight:bold; }
+  .tab-arcgis.active{ border-bottom-color: var(--arcgis-blue); color: #4da9ff; }
+  
+  .panel{ display:none; }
+  .panel.active{ display:block; }
 
-    #splash-screen.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
-    }
+  .card{ background:var(--paper); color:var(--ink); border-radius:8px; padding:22px; margin-bottom:16px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .card h2{ font-size:1.15rem; color:var(--ink); }
 
-    .splash-title {
-      font-size: 4rem;
-      font-weight: 800;
-      color: var(--gold-primary);
-      letter-spacing: 4px;
-      margin-bottom: 10px;
-    }
+  .arcgis-form-grid{ display:grid; grid-template-columns: 1fr; gap:14px; margin-top:14px; }
+  .form-group{ display:flex; flex-direction:column; gap:5px; }
+  .form-group label{ font-size:0.82rem; font-weight:700; color:#444; }
+  .form-group input, .form-group select{ padding:10px; border:1px solid #B8AE96; border-radius:5px; font-size:0.9rem; background:#FFF; }
 
-    .splash-subtitle {
-      font-size: 1.1rem;
-      color: #a0aab5;
-      margin-bottom: 30px;
-    }
+  .modules-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-top:10px; }
+  .module-card{ background:var(--paper-2); border:1px solid #C8B48C; border-radius:6px; padding:16px; }
+  .module-card h3{ font-size:1rem; color:var(--ink); border-bottom:1px solid #B8AE96; padding-bottom:6px; }
 
-    .splash-btn {
-      padding: 12px 28px;
-      background: transparent;
-      border: 2px solid var(--gold-primary);
-      color: var(--gold-primary);
-      font-weight: bold;
-      border-radius: 25px;
-      transition: all 0.3s ease;
-    }
+  .dropzone{ border:1.5px dashed #B8AE96; border-radius:6px; padding:20px; text-align:center; color:#5C5648; cursor:pointer; background:#FAF8F2; transition:0.2s; }
+  .dropzone:hover{ border-color:var(--malachite); background:#FFF; }
 
-    #splash-screen:hover .splash-btn {
-      background: var(--gold-primary);
-      color: var(--basalt);
-    }
+  button.primary{ background:var(--malachite); color:white; border:none; padding:10px 18px; border-radius:5px; font-weight:600; cursor:pointer; margin-top:12px; }
+  button.primary:hover{ background:var(--malachite-dark); }
+  button.arcgis-btn{ background:var(--arcgis-blue); color:white; border:none; padding:11px 20px; border-radius:5px; font-weight:600; cursor:pointer; margin-top:10px; }
+  
+  .btn-back-btn{ background:var(--malachite); color:var(--basalt); font-weight:700; border:none; border-radius:6px; padding:8px 16px; cursor:pointer; margin-bottom:15px; }
 
-    /* --- ENCABEZADO PRINCIPAL (SOLO GIA Y LOGO PROPORCIONAL) --- */
-    header.brand-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 30px;
-      background-color: var(--basalt);
-      color: #ffffff;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
+  .status-badge{ display:inline-block; padding:4px 8px; border-radius:4px; font-size:0.75rem; font-weight:bold; margin-top:8px; }
+  .badge-pending{ background:#e2e2e2; color:#555; }
+  .badge-loaded{ background:#d4edda; color:#155724; }
 
-    .brand-title-group h1 {
-      font-size: 1.6rem;
-      letter-spacing: 1.5px;
-      color: var(--gold-primary);
-      font-weight: 700;
-    }
-
-    .brand-logo-container {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
-    .brand-logo {
-      max-height: 48px;
-      width: auto;
-      object-fit: contain;
-    }
-
-    /* --- CONTENEDOR PRINCIPAL Y PESTAÑAS --- */
-    .main-container {
-      max-width: 1100px;
-      margin: 20px auto;
-      padding: 0 20px;
-    }
-
-    .tabs-nav {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 20px;
-      border-bottom: 2px solid #ddd;
-    }
-
-    .tab-btn {
-      padding: 10px 20px;
-      border: none;
-      background: none;
-      font-weight: bold;
-      color: var(--text-muted);
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      transition: all 0.3s ease;
-    }
-
-    .tab-btn.active {
-      color: var(--malachite);
-      border-bottom-color: var(--malachite);
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
-    }
-
-    /* --- MAPA DEL PERÚ INTERACTIVO --- */
-    .peru-map-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 30px 20px;
-      background: var(--dark-card);
-      border-radius: 12px;
-      color: #ffffff;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    }
-
-    .peru-map-section h2 {
-      margin-bottom: 20px;
-      font-size: 1.2rem;
-      color: var(--gold-light);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-
-    .map-container {
-      position: relative;
-      width: 100%;
-      max-width: 450px;
-      display: inline-block;
-    }
-
-    .map-image {
-      width: 100%;
-      height: auto;
-      display: block;
-      filter: drop-shadow(0px 0px 8px rgba(212, 175, 55, 0.2));
-    }
-
-    /* --- PUNTOS INTERACTIVOS (CAJAMARCA, AYACUCHO, TACNA) --- */
-    .map-point {
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      background-color: var(--gold-primary);
-      border: 2px solid #ffffff;
-      border-radius: 50%;
-      cursor: pointer;
-      transform: translate(-50%, -50%);
-      transition: transform 0.2s ease, background-color 0.2s ease;
-      z-index: 10;
-    }
-
-    .map-point::after {
-      content: '';
-      position: absolute;
-      top: -4px;
-      left: -4px;
-      right: -4px;
-      bottom: -4px;
-      border-radius: 50%;
-      border: 2px solid var(--gold-primary);
-      animation: pulse 1.8s infinite ease-out;
-    }
-
-    @keyframes pulse {
-      0% {
-        transform: scale(0.8);
-        opacity: 1;
-      }
-      100% {
-        transform: scale(2.2);
-        opacity: 0;
-      }
-    }
-
-    .map-point:hover {
-      background-color: #ffffff;
-      transform: translate(-50%, -50%) scale(1.3);
-    }
-
-    .map-point .tooltip {
-      visibility: hidden;
-      width: 120px;
-      background-color: var(--basalt);
-      color: #fff;
-      text-align: center;
-      border-radius: 6px;
-      padding: 6px 8px;
-      position: absolute;
-      z-index: 20;
-      bottom: 130%;
-      left: 50%;
-      transform: translateX(-50%);
-      opacity: 0;
-      transition: opacity 0.3s;
-      font-size: 0.75rem;
-      border: 1px solid var(--gold-primary);
-      box-shadow: 0px 4px 10px rgba(0,0,0,0.4);
-      pointer-events: none;
-    }
-
-    .map-point:hover .tooltip {
-      visibility: visible;
-      opacity: 1;
-    }
-
-    /* Ubicación exacta de los tres departamentos */
-    #point-cajamarca { top: 26%; left: 31%; }
-    #point-ayacucho  { top: 66%; left: 54%; }
-    #point-tacna     { top: 89%; left: 81%; }
-
-    /* --- DROPZONE / CARGA DE ARCHIVOS --- */
-    .dropzone {
-      border: 2px dashed #aaa;
-      border-radius: 10px;
-      padding: 40px;
-      text-align: center;
-      background: #ffffff;
-      cursor: pointer;
-      transition: border-color 0.3s;
-    }
-
-    .dropzone:hover {
-      border-color: var(--malachite);
-    }
-  </style>
+  .data-table-wrap{ overflow-x:auto; margin-top:15px; }
+  table.data-table{ width:100%; border-collapse:collapse; font-size:0.82rem; text-align:left; }
+  table.data-table th, table.data-table td{ padding:8px; border:1px solid #D5CEBD; }
+  table.data-table th{ background:var(--paper-2); color:var(--ink); }
+</style>
 </head>
 <body>
 
-  <!-- PANTALLA DE ENTRADA / SPLASH -->
-  <div id="splash-screen" onclick="ingresarGia()">
-    <div class="splash-title">GIA</div>
-    <div class="splash-subtitle">Asistente Inteligente de Geología</div>
-    <button class="splash-btn">Hacer clic para ingresar</button>
+<!-- SPLASH -->
+<div id="splash" onclick="dismissSplash()">
+  <div class="splash-inner">
+    <div class="splash-logo">GIA</div>
+    <div class="splash-tag">Asistente Inteligente de Geología</div>
+    <div class="splash-hint">Haz clic para ingresar</div>
+  </div>
+</div>
+
+<!-- MAPA DE PERÚ CON CAJAMARCA, AYACUCHO Y TACNA -->
+<div id="screen-map">
+  <div class="map-header">
+    <h1>GIA — Mapa de Proyectos Perú</h1>
+    <div style="font-size:0.85rem; color:#9AA0A6;">Seleccione Cajamarca, Ayacucho o Tacna para ingresar</div>
   </div>
 
-  <!-- ENCABEZADO MODIFICADO -->
-  <header class="brand-row">
-    <div class="brand-title-group">
-      <h1>GIA</h1>
+  <div class="map-card-container">
+    <div id="popover-overlay" class="popover-overlay">
+      <div class="popover-card">
+        <h3 id="popover-title" style="color:#FFF;">Departamento</h3>
+        <div id="popover-list"></div>
+      </div>
     </div>
-    <div class="brand-logo-container">
-      <img class="brand-logo" src="logo-goldfields.png" alt="Logo" />
-    </div>
-  </header>
-
-  <!-- CONTENIDO PRINCIPAL -->
-  <main class="main-container">
     
-    <nav class="tabs-nav">
-      <button class="tab-btn active" onclick="cambiarTab('mapa-tab')">Ubicación / Mapa</button>
-      <button class="tab-btn" onclick="cambiarTab('carga-tab')">Carga de Datos (Excel)</button>
-    </nav>
+    <div class="map-wrap">
+      <svg viewBox="0 0 500 700">
+        <!-- Silueta Simplificada del Perú -->
+        <path class="peru-outline" d="M 120,50 L 180,30 L 260,70 L 330,150 L 440,280 L 460,350 L 380,480 L 320,580 L 290,650 L 240,620 L 180,510 L 120,380 L 80,260 L 50,150 Z" />
 
-    <!-- PESTAÑA 1: MAPA -->
-    <div id="mapa-tab" class="tab-content active">
-      <section class="peru-map-section">
-        <h2>Unidades y Proyectos Exploratorios</h2>
+        <!-- 1. CAJAMARCA -->
+        <g onclick="selectDept('Cajamarca', [{name:'Proyecto Cajamarca Norte', code:'CAJ-01'}, {name:'Porphyry Cajamarca', code:'CAJ-02'}])">
+          <path class="dept-path" d="M 110,120 L 160,110 L 170,160 L 120,170 Z" />
+          <text x="140" y="145" class="dept-label">CAJAMARCA</text>
+          <g class="dept-marker">
+            <circle cx="140" cy="140" r="16" class="pulse-circle"/>
+            <circle cx="140" cy="140" r="8" class="main-circle"/>
+            <text x="140" y="143" class="marker-text">CAJ</text>
+          </g>
+        </g>
+
+        <!-- 2. AYACUCHO -->
+        <g onclick="selectDept('Ayacucho', [{name:'Proyecto Ayacucho Sur', code:'AYA-01'}, {name:'Vetas Ayacucho', code:'AYA-02'}])">
+          <path class="dept-path" d="M 230,360 L 280,350 L 290,420 L 240,430 Z" />
+          <text x="260" y="395" class="dept-label">AYACUCHO</text>
+          <g class="dept-marker">
+            <circle cx="260" cy="390" r="16" class="pulse-circle"/>
+            <circle cx="260" cy="390" r="8" class="main-circle"/>
+            <text x="260" y="393" class="marker-text">AYA</text>
+          </g>
+        </g>
+
+        <!-- 3. TACNA -->
+        <g onclick="selectDept('Tacna', [{name:'Proyecto Tacna Frontera', code:'TAC-01'}, {name:'Porphyry Tacna', code:'TAC-02'}])">
+          <path class="dept-path" d="M 290,600 L 330,590 L 320,640 L 280,630 Z" />
+          <text x="305" y="620" class="dept-label">TACNA</text>
+          <g class="dept-marker">
+            <circle cx="305" cy="615" r="16" class="pulse-circle"/>
+            <circle cx="305" cy="615" r="8" class="main-circle"/>
+            <text x="305" y="618" class="marker-text">TAC</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- APLICACIÓN PRINCIPAL -->
+<div id="screen-app">
+  <header>
+    <h1>GIA</h1>
+    <span style="font-size:0.85rem; color:#9AA0A6;">| Modulo de Integración Geológica</span>
+  </header>
+  <main>
+    <div id="btn-back-wrap">
+      <button class="btn-back-btn" onclick="backToMap()">← Cambiar de Proyecto / Departamento</button>
+    </div>
+
+    <!-- PESTAÑAS PRINCIPALES -->
+    <div class="tabs-main">
+      <div class="tab active" onclick="switchTab('importar')">Importar Data (XRF / SUCEP / TSG)</div>
+      <div class="tab tab-arcgis" onclick="switchTab('arcgis')">⚙️ Modificar / Configurar ArcGIS</div>
+    </div>
+
+    <!-- PESTAÑA 1: IMPORTAR DATA -->
+    <div id="panel-importar" class="panel active">
+      <div class="card">
+        <h2>Cargar Ensayos y Lecturas de Campo</h2>
+        <p style="font-size:0.88rem; color:#5C5648;">Suba los archivos correspondientes para vincularlos con ArcGIS.</p>
         
-        <div class="map-container">
-          <img class="map-image" src="https://lh3.googleusercontent.com/d/1vvG70ktnjyg0VtySh6wDn0f7nhLdc5x5" alt="Mapa del Perú" />
-
-          <!-- Puntos solicitados -->
-          <div class="map-point" id="point-cajamarca" onclick="seleccionarRegion('Cajamarca')">
-            <span class="tooltip"><strong>Cajamarca</strong></span>
+        <div class="modules-grid">
+          
+          <!-- XRF -->
+          <div class="module-card">
+            <h3>1. Fluorescencia (XRF)</h3>
+            <p style="font-size:0.8rem; color:#666;">Leyes elementales (Cu, Au, Fe, etc.)</p>
+            <div class="dropzone" onclick="document.getElementById('fileXrf').click()">
+              📄 Adjuntar Excel/CSV XRF
+              <input type="file" id="fileXrf" hidden accept=".xlsx,.xls,.csv" onchange="processModule('xrf', event)">
+            </div>
+            <div id="badge-xrf" class="status-badge badge-pending">Sin archivo cargado</div>
           </div>
 
-          <div class="map-point" id="point-ayacucho" onclick="seleccionarRegion('Ayacucho')">
-            <span class="tooltip"><strong>Ayacucho</strong></span>
+          <!-- SUCEP -->
+          <div class="module-card">
+            <h3>2. Susceptibilidad (SUCEP)</h3>
+            <p style="font-size:0.8rem; color:#666;">Lecturas magnéticas de testigo/sonda.</p>
+            <div class="dropzone" onclick="document.getElementById('fileSucep').click()">
+              📄 Adjuntar Excel/CSV SUCEP
+              <input type="file" id="fileSucep" hidden accept=".xlsx,.xls,.csv" onchange="processModule('sucep', event)">
+            </div>
+            <div id="badge-sucep" class="status-badge badge-pending">Sin archivo cargado</div>
           </div>
 
-          <div class="map-point" id="point-tacna" onclick="seleccionarRegion('Tacna')">
-            <span class="tooltip"><strong>Tacna</strong></span>
+          <!-- TSG -->
+          <div class="module-card">
+            <h3>3. Espectrometría (TSG)</h3>
+            <p style="font-size:0.8rem; color:#666;">Mineralogía de alteración (TerraSpec).</p>
+            <div class="dropzone" onclick="document.getElementById('fileTsg').click()">
+              📄 Adjuntar Archivo TSG
+              <input type="file" id="fileTsg" hidden accept=".xlsx,.xls,.csv" onchange="processModule('tsg', event)">
+            </div>
+            <div id="badge-tsg" class="status-badge badge-pending">Sin archivo cargado</div>
+          </div>
+
+        </div>
+
+        <button class="primary" style="margin-top:20px; width:100%; font-size:1rem;" onclick="syncWithArcGIS()">
+          🚀 Procesar y Sincronizar Automáticamente con ArcGIS
+        </button>
+      </div>
+
+      <!-- Resumen / Tabla -->
+      <div class="card">
+        <h2>Vista Previa de Consolidado</h2>
+        <div class="data-table-wrap">
+          <table class="data-table" id="previewTable">
+            <thead>
+              <tr><th>Tipo Ensayo</th><th>Muestra / Hole ID</th><th>Atributo 1</th><th>Atributo 2</th><th>Estado ArcGIS</th></tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="5" style="text-align:center; color:#888;">Cargue un archivo (XRF, SUCEP o TSG) para previsualizar.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PESTAÑA 2: MODIFICAR / CONFIGURAR ARCGIS -->
+    <div id="panel-arcgis" class="panel">
+      <div class="card">
+        <h2>Conexión y Enlaces a Servicios de ArcGIS</h2>
+        <p style="font-size:0.88rem; color:#5C5648;">Pegue los links e IDs de sus Feature Server o Web Maps de ArcGIS para la unión automática.</p>
+        
+        <div class="arcgis-form-grid">
+          <div class="form-group">
+            <label>URL del Feature Service / Rest API (ArcGIS Online / Portal):</label>
+            <input type="text" id="arcgis-url" placeholder="https://servicesX.arcgis.com/XXXXX/arcgis/rest/services/Geologia/FeatureServer/0">
+          </div>
+
+          <div class="form-group">
+            <label>Item ID del WebMap de ArcGIS:</label>
+            <input type="text" id="arcgis-map-id" placeholder="e.g. 8a3f1249b102431fa2e91209e99a8188">
+          </div>
+
+          <div class="form-group">
+            <label>Token de Autenticación / API Key:</label>
+            <input type="password" id="arcgis-token" placeholder="AAPKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+          </div>
+
+          <div class="form-group">
+            <label>Campo Key de Enlace Común:</label>
+            <select id="arcgis-key-field">
+              <option value="HOLE_ID">HOLE_ID (ID de Taladro)</option>
+              <option value="SAMPLE_ID">SAMPLE_ID (ID Muestra)</option>
+              <option value="CODE">CÓDIGO DE REGISTRO</option>
+            </select>
           </div>
         </div>
-      </section>
-    </div>
 
-    <!-- PESTAÑA 2: CARGA DE ARCHIVOS -->
-    <div id="carga-tab" class="tab-content">
-      <div class="dropzone" id="dropzone">
-        <p style="font-weight: bold; color: var(--text-main);">Arrastra tus archivos de perforación/muestras (.xlsx, .csv) aquí</p>
-        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 5px;">o haz clic para examinar desde tu equipo</p>
-        <input type="file" id="file-input" accept=".xlsx, .xls, .csv" style="display: none;" />
+        <button class="arcgis-btn" onclick="saveArcGISConfig()">Guardar Configuración de Enlace</button>
+        <div id="config-status" style="margin-top:10px; font-size:0.85rem; font-weight:bold;"></div>
       </div>
     </div>
 
   </main>
+</div>
 
-  <script>
-    // Entrar desde el Splash Screen
-    function ingresarGia() {
-      const splash = document.getElementById('splash-screen');
-      splash.classList.add('hidden');
+<script>
+  let arcgisConfig = { url: '', mapId: '', token: '', keyField: 'HOLE_ID' };
+  let loadedData = { xrf: [], sucep: [], tsg: [] };
+
+  function dismissSplash() {
+    document.getElementById('splash').classList.add('fade-out');
+    setTimeout(() => {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('screen-map').classList.add('active');
+    }, 800);
+  }
+
+  function selectDept(name, list) {
+    document.getElementById('popover-title').textContent = name;
+    let container = document.getElementById('popover-list');
+    container.innerHTML = '';
+    list.forEach(p => {
+      let b = document.createElement('button');
+      b.className = 'popover-btn';
+      b.textContent = p.name;
+      b.onclick = () => openApp();
+      container.appendChild(b);
+    });
+    document.getElementById('popover-overlay').style.display = 'block';
+  }
+
+  function openApp() {
+    document.getElementById('popover-overlay').style.display = 'none';
+    document.getElementById('screen-map').classList.remove('active');
+    document.getElementById('screen-app').classList.add('active');
+  }
+
+  function backToMap() {
+    document.getElementById('screen-app').classList.remove('active');
+    document.getElementById('screen-map').classList.add('active');
+  }
+
+  function switchTab(tab) {
+    document.querySelectorAll('.tabs-main .tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    
+    if(tab === 'importar') {
+      document.querySelectorAll('.tabs-main .tab')[0].classList.add('active');
+      document.getElementById('panel-importar').classList.add('active');
+    } else {
+      document.querySelectorAll('.tabs-main .tab')[1].classList.add('active');
+      document.getElementById('panel-arcgis').classList.add('active');
     }
+  }
 
-    // Cambio de Pestañas
-    function cambiarTab(tabId) {
-      document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  function saveArcGISConfig() {
+    arcgisConfig.url = document.getElementById('arcgis-url').value;
+    arcgisConfig.mapId = document.getElementById('arcgis-map-id').value;
+    arcgisConfig.token = document.getElementById('arcgis-token').value;
+    arcgisConfig.keyField = document.getElementById('arcgis-key-field').value;
 
-      document.getElementById(tabId).classList.add('active');
-      event.currentTarget.classList.add('active');
-    }
+    let status = document.getElementById('config-status');
+    status.style.color = '#155724';
+    status.textContent = '✓ Configuración guardada correctamente. Clave activa: ' + arcgisConfig.keyField;
+  }
 
-    // Interacción al hacer clic en los puntos del mapa
-    function seleccionarRegion(region) {
-      alert("Zona seleccionada: " + region);
-    }
+  function processModule(moduleType, event) {
+    let file = event.target.files[0];
+    if(!file) return;
 
-    // Lógica para abrir explorador de archivos en la dropzone
-    const dropzone = document.getElementById('dropzone');
-    const fileInput = document.getElementById('file-input');
+    let reader = new FileReader();
+    reader.onload = function(evt) {
+      let data = new Uint8Array(evt.target.result);
+      let wb = XLSX.read(data, {type: 'array'});
+      let sheet = wb.Sheets[wb.SheetNames[0]];
+      let json = XLSX.utils.sheet_to_json(sheet);
 
-    if (dropzone) {
-      dropzone.addEventListener('click', () => fileInput.click());
-      fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          alert('Archivo cargado: ' + e.target.files[0].name);
-        }
+      loadedData[moduleType] = json;
+
+      let badge = document.getElementById(badge-${moduleType});
+      badge.className = 'status-badge badge-loaded';
+      badge.textContent = ✓ ${file.name} (${json.length} filas);
+
+      renderTable();
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function renderTable() {
+    let tbody = document.querySelector('#previewTable tbody');
+    tbody.innerHTML = '';
+    let hasData = false;
+
+    ['xrf', 'sucep', 'tsg'].forEach(mod => {
+      loadedData[mod].forEach((row, idx) => {
+        hasData = true;
+        let keys = Object.keys(row);
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${mod.toUpperCase()}</strong></td>
+          <td>${row[keys[0]] || 'ID-' + idx}</td>
+          <td>${keys[1] ? keys[1] + ': ' + row[keys[1]] : '-'}</td>
+          <td>${keys[2] ? keys[2] + ': ' + row[keys[2]] : '-'}</td>
+          <td><span style="color:#B5651D;">Listo para Sync</span></td>
+        `;
+        tbody.appendChild(tr);
       });
-    }
-  </script>
+    });
 
+    if(!hasData) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">Cargue un archivo (XRF, SUCEP o TSG) para previsualizar.</td></tr>';
+    }
+  }
+
+  function syncWithArcGIS() {
+    if(!arcgisConfig.url) {
+      alert('⚠️ Por favor configure primero la URL / ID de ArcGIS en "⚙️ Modificar / Configurar ArcGIS".');
+      switchTab('arcgis');
+      return;
+    }
+
+    let totalRows = loadedData.xrf.length + loadedData.sucep.length + loadedData.tsg.length;
+    if(totalRows === 0) {
+      alert('⚠️ Cargue al menos un archivo de XRF, SUCEP o TSG antes de sincronizar.');
+      return;
+    }
+
+    alert(✅ Sincronizando ${totalRows} registros con ArcGIS:\nURL: ${arcgisConfig.url}\nClave: ${arcgisConfig.keyField});
+  }
+</script>
 </body>
 </html>
